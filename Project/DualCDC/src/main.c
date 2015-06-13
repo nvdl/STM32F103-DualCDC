@@ -18,24 +18,69 @@ int fputc(int ch, FILE *f)
 * Output         : None.
 * Return         : None.
 *******************************************************************************/
-int main(void)
-{
+void GPIO_Config();
+
+int main(void) {
+
+  int i;
+
 	HardwareInit();
 
 	USB_Prepare();
 	USB_Init();
 
-	while (1)
-	{
-		if (bDeviceState == CONFIGURED)
-		{
-			if (USB_USART1_Data.count_out != 0)
-				USB_To_USARTx_Send_Data(&USB_USART1_Data);
+  // Setup STM32 system (clock, PLL and Flash configuration)
+  SystemInit();
 
-			if (USB_USART2_Data.count_out != 0)
-				USB_To_USARTx_Send_Data(&USB_USART2_Data);
+  // Setup the GPIOs
+  GPIO_Config();
+
+	while (1)	{
+
+	  if (bDeviceState == CONFIGURED) { // ATTACHED
+			if (USB_USART1_Data.count_out != 0) {
+			  //for (i = 0; i < VIRTUAL_COM_PORT_DATA_SIZE; i ++) {
+			  /*for (i = 0; i < 1; i ++) {
+			    USB_USART1_Data.buffer_out[i] = 'a';
+			    USB_USART1_Data.buffer_in[i] = 'a';
+			  }*/
+			  GPIO_SetBits(GPIOB, GPIO_Pin_0);
+        USB_To_USARTx_Send_Data(&USB_USART1_Data);
+        Delay(0xAFFFF);
+        GPIO_ResetBits(GPIOB, GPIO_Pin_0);
+			}
+
+
+			if (USB_USART2_Data.count_out != 0) {
+        /*for (i = 0; i < 1; i ++) {
+          USB_USART2_Data.buffer_out[i] = 'a';
+          USB_USART2_Data.buffer_in[i] = 'a';
+        }*/
+			  GPIO_SetBits(GPIOB, GPIO_Pin_0);
+			  USB_To_USARTx_Send_Data(&USB_USART2_Data);
+			  Delay(0xAFFFF);
+			  GPIO_ResetBits(GPIOB, GPIO_Pin_0);
+			}
 		}
+
 	}
+
+}
+
+void Delay(volatile unsigned long delay) {
+    for(; delay; --delay );
+}
+
+void GPIO_Config() {
+    GPIO_InitTypeDef  GPIO_InitStructure;
+
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+
+    //GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+    GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
+    GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+    GPIO_Init(GPIOB, &GPIO_InitStructure);
 }
 
 #ifdef USE_FULL_ASSERT
